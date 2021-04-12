@@ -87,6 +87,8 @@ class Tensor:
             # Maybe some other arguments to be supported, reported as error for now
             raise TypeError("new() received an invalid combination of arguments")
 
+        self._is_variable = False
+
     @property
     def shape(self):
         if self._local_or_consistent_tensor is not None:
@@ -118,6 +120,14 @@ class Tensor:
             return self._local_or_consistent_tensor.dtype
         else:
             return self._undetermined_tensor.dtype
+
+    @property
+    def is_variable(self):
+        return self._is_variable
+
+    @is_variable.setter
+    def is_variable(self, is_variable):
+        self._is_variable = is_variable
 
     # internal decorator
     def _auto_determine(func):
@@ -371,7 +381,8 @@ class Tensor:
         assert not self.is_determined
         if determining_initializer is None:
             determining_initializer = self._determining_initializer
-        self._local_or_consistent_tensor = determining_initializer(self)
+
+        self._local_or_consistent_tensor = determining_initializer(self)    
         self._undetermined_tensor = None
 
     @property
@@ -599,25 +610,62 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
+def _create_variable_op_expr(shape, dtype, initializer=None, name=None):
+    op_conf = op_conf_cfg.VariableOpConf()
+    for dim in shape:
+        op_conf.mutable_shape().add_dim(dim)
+    op_conf.set_data_type(data_type_cfg.DataType(oneflow_api.deprecated.GetProtoDtype4OfDtype(dtype)))
+
+    # TODO(): Set initializer.
+    # if initializer is not None:
+    #     op_conf.mutable_initializer()
+    op_conf.set_out("out")
+
+    if name is None:
+      name = id_util.UniqueStr("tensor_")
+    variable_op = oneflow_api.one.VariableOpExpr(name, op_conf, [], ["out"])
+    return variable_op()[0]
+
+
+def _create_constant(shape, dtype):
+    if isinstance(shape, flow.Size):
+        shape = tuple(shape)
+    if dtype == flow.float32:
+        is_floating_value = True
+        floating_value = float(0)
+        integer_value = int(0)
+    else:
+        is_floating_value = False
+        floating_value = float(0)
+        integer_value = int(0)
+    constant_op = (
+        flow.builtin_op("constant")
+        .Output("out")
+        .Attr("floating_value", floating_value)
+        .Attr("integer_value", integer_value)
+        .Attr("is_floating_value", is_floating_value)
+        .Attr("dtype", dtype)
+        .Attr("shape", shape)
+        .Build()
+    )
+    return constant_op()[0]
+
+
 def _default_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
-    variable_name = id_util.UniqueStr("tensor_")
 
-    blob = None
+    with tensor._placement_scope():
+        if tensor.is_variable:
+            variable_name = id_util.UniqueStr("tensor_")
+            delegate_tensor = _create_variable(undetermined_tensor.shape, undetermined_tensor.dtype,
+                                               initializer=nundetermined_tensor.data_initializer,
+                                               name=variable_name)
+        else:
+            delegate_tensor = _create_constant(undetermined_tensor.shape, undetermined_tensor.dtype)
+            # TODO(): Initialize tensor by callback.
+            delegate_tensor = delegate_tensor
 
-    @global_function_or_identity()
-    def job():
-        nonlocal blob
-        with tensor._placement_scope():
-            blob = flow.get_variable(
-                name=variable_name,
-                shape=tuple(undetermined_tensor.shape),
-                dtype=undetermined_tensor.dtype,
-                initializer=undetermined_tensor.data_initializer,
-            )
-
-    job()
     if undetermined_tensor.is_consistent:
         determined_tensor = oneflow_api.ConsistentTensor(
             undetermined_tensor.shape,
@@ -639,7 +687,7 @@ def _default_initializer_for_determining(tensor):
             True,
             undetermined_tensor.retain_grad,
         )
-    determined_tensor._set_blob_object(blob.blob_object)
+    determined_tensor._set_blob_object(delegate_tensor._local_or_consistent_tensor._blob_object)
     return determined_tensor
 
 
@@ -657,21 +705,21 @@ def _numpy_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
     assert undetermined_tensor.numpy_data is not None
-    variable_name = id_util.UniqueStr("tensor_")
 
-    @global_function_or_identity()
-    def set_numpy_data():
-        with tensor._placement_scope():
-            flow.get_variable(
-                name=variable_name,
-                shape=tuple(undetermined_tensor.shape),
-                dtype=undetermined_tensor.dtype,
-                initializer=undetermined_tensor.data_initializer,
-            )
+    with tensor._placement_scope():
+        if tensor.is_variable:
+            variable_name = id_util.UniqueStr("tensor_")
+            delegate_tensor = _create_variable(undetermined_tensor.shape, undetermined_tensor.dtype,
+                                               initializer=nundetermined_tensor.data_initializer,
+                                               name=variable_name)
+        else:
+            delegate_tensor = _create_constant(undetermined_tensor.shape, undetermined_tensor.dtype)
 
-    set_numpy_data()
-    flow.load_variables({variable_name: undetermined_tensor.numpy_data})
-    blob = flow.get_all_variables()[variable_name]
+    # TODO(): Initialize tensor by callback.
+    delegate_tensor = delegate_tensor
+
+    # flow.load_variables({variable_name: undetermined_tensor.numpy_data})
+    # blob = flow.get_all_variables()[variable_name]
     if undetermined_tensor.is_consistent:
         determined_tensor = oneflow_api.ConsistentTensor(
             undetermined_tensor.shape,
@@ -693,7 +741,7 @@ def _numpy_initializer_for_determining(tensor):
             True,
             undetermined_tensor.retain_grad,
         )
-    determined_tensor._set_blob_object(blob.blob_object)
+    determined_tensor._set_blob_object(delegate_tensor._local_or_consistent_tensor._blob_object)
     return determined_tensor
 
 

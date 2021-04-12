@@ -72,7 +72,8 @@ def InterpretScope(session, function_desc, config_proto):
 
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
-        distribute_strategy = distribute_util.DistributeConsistentStrategy()
+        # distribute_strategy = distribute_util.DistributeConsistentStrategy()
+        distribute_strategy = distribute_util.DistributeMirroredStrategy()
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
@@ -82,6 +83,7 @@ def InterpretScope(session, function_desc, config_proto):
     scope = scope_util.MakeInitialScope(
         job_conf, *tag_and_dev_ids, hierarchy, is_mirrored
     )
+
     with _JobBuildAndInferCtx(job_conf.job_name()), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):

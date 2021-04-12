@@ -98,7 +98,7 @@ def InitScopeStack():
     job_conf = job_conf_cfg.JobConfigProto()
     job_conf.mutable_predict_conf()
     job_conf.set_job_name("")
-    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], None, is_mirrored=False)
+    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], None, is_mirrored=True)
     oneflow_api.InitGlobalScopeStack(scope)
 
 
