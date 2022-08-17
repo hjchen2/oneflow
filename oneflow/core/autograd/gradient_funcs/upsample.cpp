@@ -100,7 +100,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
-    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+    if (composed_attrs.HasAttr4Name("output_size")) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -150,7 +150,7 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
     ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+    if (composed_attrs.HasAttr4Name("output_size")) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -198,7 +198,7 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->scale_factor = JUST(composed_attrs.GetAttr<double>("scale_factor"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+    if (composed_attrs.HasAttr4Name("output_size")) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -244,7 +244,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->scale_factor = JUST(composed_attrs.GetAttr<double>("scale_factor"));
-    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+    if (composed_attrs.HasAttr4Name("output_size")) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -294,7 +294,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
     ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+    if (composed_attrs.HasAttr4Name("output_size")) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -343,7 +343,7 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
     ctx->depth_scale = JUST(composed_attrs.GetAttr<double>("depth_scale"));
     ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
-    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+    if (composed_attrs.HasAttr4Name("output_size")) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -395,7 +395,7 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
     ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+    if (composed_attrs.HasAttr4Name("output_size")) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));

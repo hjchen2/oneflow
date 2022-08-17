@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/throw.h"
+#include "oneflow/core/common/small_vector.h"
 
 namespace oneflow {
 
@@ -26,50 +28,19 @@ class AttrVal;
 }
 class AttrValue;
 class MutableAttrMap;
-
-// Make sure AttrName2AttrVal is a ordered map.
-using AttrName2AttrVal = std::map<std::string, std::shared_ptr<const user_op::AttrVal>>;
-
-class AttrName2AttrValWrapper {
- public:
-  AttrName2AttrValWrapper(const std::shared_ptr<const AttrName2AttrVal>& attrs);
-  AttrName2AttrValWrapper(const AttrName2AttrValWrapper&) = default;
-  AttrName2AttrValWrapper(AttrName2AttrValWrapper&&) = default;
-  ~AttrName2AttrValWrapper() = default;
-
-  size_t size() const { return attrs_->size(); }
-  bool empty() const { return attrs_->empty(); }
-
-  AttrName2AttrValWrapper& operator=(const AttrName2AttrValWrapper& other) {
-    attrs_ = other.attrs_;
-    hash_value_ = other.hash_value_;
-    return *this;
-  }
-
-  bool operator==(const AttrName2AttrValWrapper& other) const;
-
-  using const_iterator = typename AttrName2AttrVal::const_iterator;
-  const_iterator begin() const { return attrs_->begin(); }
-  const_iterator end() const { return attrs_->end(); }
-
-  const_iterator find(const std::string& attr_name) const { return attrs_->find(attr_name); }
-
-  size_t hash_value() const { return hash_value_; }
-
- private:
-  std::shared_ptr<const AttrName2AttrVal> attrs_;
-  size_t hash_value_;
-};
+template<int N>
+class CachedMutableAttrMap;
+class UserOpConf;
 
 class AttrMap final {
  public:
   AttrMap();
-  explicit AttrMap(const std::shared_ptr<const AttrName2AttrVal>& attrs);
+  AttrMap(const MutableAttrMap& other);
 
-  using value_type = typename AttrName2AttrVal::value_type;
-  AttrMap(std::initializer_list<value_type> init);
+  template<int N>
+  AttrMap(const CachedMutableAttrMap<N>& other);
 
-  explicit AttrMap(const MutableAttrMap& other);  // without coping AttrVal
+  AttrMap(const UserOpConf& user_op_conf);
 
   AttrMap(const AttrMap&) = default;
   AttrMap(AttrMap&&) = default;
@@ -83,23 +54,72 @@ class AttrMap final {
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
+  bool HasAttr4Name(const std::string& attr_name) const;
 
-  size_t size() const { return attrs_.size(); }
-  bool empty() const { return attrs_.empty(); }
+  size_t size() const { return valid_size_; }
+  bool empty() const { return valid_size_ > 0; }
 
-  using const_iterator = typename AttrName2AttrVal::const_iterator;
-  const_iterator begin() const { return attrs_.begin(); }
-  const_iterator end() const { return attrs_.end(); }
+  size_t hash_value() const { return hash_value_; }
 
-  const_iterator find(const std::string& attr_name) const { return attrs_.find(attr_name); }
+  struct SharedAttr {
+    const std::string* attr_names;
+    small_vector<std::string, 4> allocated_attr_names;
+    small_vector<std::pair<std::shared_ptr<const user_op::AttrVal>, bool>, 10> attrs;
+  };
 
-  size_t hash_value() const { return attrs_.hash_value(); }
+  class const_iterator {
+   public:
+    using reference = const std::pair<std::string, std::shared_ptr<const user_op::AttrVal>>&;
+    using pointer = const std::pair<std::string, std::shared_ptr<const user_op::AttrVal>>*;
+
+    const_iterator(int pos, int limit, const SharedAttr* data)
+        : pos_(pos), limit_(limit), data_(data) {
+      while (pos_ < limit_) {
+        if (!data_->attrs[pos_].second) {
+          ++pos_;
+          continue;
+        }
+        kv_.first = data_->attr_names[pos_];
+        kv_.second = data_->attrs[pos_].first;
+      }
+    }
+    ~const_iterator() = default;
+
+    reference operator*() const { return kv_; }
+    pointer operator->() const { return &kv_; }
+
+    const_iterator& operator++() {
+      while (pos_ < limit_ - 1) {
+        ++pos_;
+        if (!data_->attrs[pos_].second) {
+          ++pos_;
+          continue;
+        }
+        kv_.first = data_->attr_names[pos_];
+        kv_.second = data_->attrs[pos_].first;
+      }
+      return *this;
+    }
+    bool operator==(const const_iterator& x) const { return pos_ == x.pos_ && data_ == x.data_; }
+    bool operator!=(const const_iterator& x) const { return !(*this == x); }
+
+   private:
+    int pos_;
+    int limit_;
+    const SharedAttr* data_;
+    std::pair<std::string, std::shared_ptr<const user_op::AttrVal>> kv_;
+  };
+
+  const_iterator begin() const { return const_iterator(0, max_size_, data_.get()); }
+  const_iterator end() const { return const_iterator(max_size_, max_size_, data_.get()); }
 
  private:
-  AttrName2AttrValWrapper attrs_;
+  int max_size_;
+  int valid_size_;
+  size_t hash_value_;
+  std::shared_ptr<SharedAttr> data_;
 };
 
-class UserOpConf;
 AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf);
 
 class ComposedAttrMap final {
@@ -113,6 +133,8 @@ class ComposedAttrMap final {
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
+
+  bool HasAttr4Name(const std::string& attr_name) const;
 
   void ResetPrior(const AttrMap& prior) { prior_ = prior; }
   void ResetBase(const AttrMap& base) { base_ = base; }
@@ -133,13 +155,6 @@ class MutableAttrMap : public std::map<std::string, std::shared_ptr<user_op::Att
 }  // namespace oneflow
 
 namespace std {
-
-template<>
-struct hash<oneflow::AttrName2AttrValWrapper> final {
-  size_t operator()(const oneflow::AttrName2AttrValWrapper& attr_name2attr_val) const {
-    return attr_name2attr_val.hash_value();
-  }
-};
 
 template<>
 struct hash<oneflow::AttrMap> final {

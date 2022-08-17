@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/cached_attr_map.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -227,9 +228,29 @@ class EmptyFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
     Symbol<Device> device_symbol = device.value_or(default_device_);
+#if 0
+    OF_PROFILER_RANGE_PUSH("CachedAttrs");
     constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Empty);
     const auto attrs = *JUST(GetAttrs(shape, dtype, device_symbol, pin_memory));
+    OF_PROFILER_RANGE_POP();
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+#else
+    OF_PROFILER_RANGE_PUSH("CachedAttrs");
+    static thread_local CachedMutableAttrMap<5> attrs;
+    attrs.reset();
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<DataType>("dtype", dtype->data_type());
+    attrs.SetAttr<bool>("pin_memory", pin_memory);
+    attrs.SetAttr<std::string>("device_type", device_symbol->type());
+    attrs.SetAttr<int64_t>("device_id", device_symbol->device_id());
+
+    OF_PROFILER_RANGE_POP();
+    // OF_PROFILER_RANGE_PUSH("ConsMap");
+    // auto attrmap = AttrMap2(attrs);
+    // OF_PROFILER_RANGE_POP();
+    // std::cout << attrmap.valid_size_ << std::endl;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+#endif
   }
 
  private:
