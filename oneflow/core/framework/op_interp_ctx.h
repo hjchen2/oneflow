@@ -16,15 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERP_CTX_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERP_CTX_H_
 
-#include <string>
-
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/op_attrs.h"
-#include "oneflow/core/framework/op_base.h"
+#include "oneflow/core/framework/op_definition.h"
+#include "oneflow/core/framework/op_definition_attrs.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 
@@ -40,15 +38,15 @@ class OpKernelState;
 
 class OpInterpCtx {
  public:
-  explicit OpInterpCtx(const std::shared_ptr<OpBase>& op) : op_(op) {}
+  explicit OpInterpCtx(const std::shared_ptr<OpDefinitionBase>& op) : op_(op) {}
   virtual ~OpInterpCtx() = default;
 
   template<typename T>
-  Maybe<const T&> GetAttr(const std::string& attr_name) const;
+  Maybe<const T&> Attr(const std::string& attr_name) const;
 
-  Maybe<AttrVal> GetAttr(const std::string& attr_name) const;
+  Maybe<AttrVal> Attr(const std::string& attr_name) const;
 
-  OpAttrs GetAttrs() const;
+  OpDefinitionAttributes Attrs() const;
 
   template<typename T>
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
@@ -57,10 +55,10 @@ class OpInterpCtx {
 
   bool HasAttr(const std::string& attr_name) const;
 
-  const HashSet<std::string>& AttrNames() const;
+  const Set<std::string>& AttrNames() const;
 
  public:
-  std::shared_ptr<OpBase> op_;
+  std::shared_ptr<OpDefinitionBase> op_;
 
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for global op

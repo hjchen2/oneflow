@@ -13,15 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_ATTRS_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_ATTRS_H_
-
-#include <string>
-#include <vector>
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_DEFINITION_ATTRS_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_DEFINITION_ATTRS_H_
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/op_definition.h"
 
 namespace oneflow {
 
@@ -29,9 +27,9 @@ using user_op::AttrVal;
 
 class OpInterpCtx;
 
-class OpAttrs {
+class OpDefinitionAttributes {
  public:
-  explicit OpAttrs(const OpInterpCtx* ctx) : ctx_(ctx) {}
+  explicit OpDefinitionAttributes(const OpInterpCtx* ctx) : ctx_(ctx) {}
 
   size_t count(const std::string& attr_name) const;
 
@@ -44,12 +42,12 @@ class OpAttrs {
 
   class const_iterator {
    public:
-    using bucket_iter = HashSet<std::string>::const_iterator;
+    using bucket_iter = Set<std::string>::const_iterator;
     using reference = const std::pair<std::string, std::shared_ptr<AttrVal>>&;
     using pointer = const std::pair<std::string, std::shared_ptr<AttrVal>>*;
 
     const_iterator() = default;
-    const_iterator(bucket_iter pos, bucket_iter limit, const OpAttrs* self)
+    const_iterator(bucket_iter pos, bucket_iter limit, const OpDefinitionAttributes* self)
         : pos_(pos), limit_(limit), self_(self) {
       CHECK_JUST(UpdateKV());
     }
@@ -75,14 +73,14 @@ class OpAttrs {
 
     bucket_iter pos_;
     bucket_iter limit_;
-    const OpAttrs* self_;
+    const OpDefinitionAttributes* self_;
     std::pair<std::string, std::shared_ptr<AttrVal>> kv_;
   };
 
   const_iterator begin() const;
   const_iterator end() const;
 
-  bool operator==(const OpAttrs& other) const;
+  bool operator==(const OpDefinitionAttributes& other) const;
 
  private:
   const OpInterpCtx* ctx_;
@@ -93,10 +91,10 @@ class OpAttrs {
 namespace std {
 
 template<>
-struct hash<oneflow::OpAttrs> {
-  size_t operator()(const oneflow::OpAttrs& attrs) const;
+struct hash<oneflow::OpDefinitionAttributes> {
+  size_t operator()(const oneflow::OpDefinitionAttributes& attrs) const;
 };
 
 }  // namespace std
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_ATTRS_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_DEFINITION_ATTRS_H_

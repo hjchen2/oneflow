@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/cached_attr_map.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"

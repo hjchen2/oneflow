@@ -18,29 +18,29 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<AttrVal> OpInterpCtx::GetAttr(const std::string& attr_name) const {
-  return op_->GetAttr(attr_name);
+Maybe<AttrVal> OpInterpCtx::Attr(const std::string& attr_name) const {
+  return op_->Attr(attr_name);
 }
 
 template<typename T>
-Maybe<const T&> OpInterpCtx::GetAttr(const std::string& attr_name) const {
-  const auto& attr_val = JUST(this->GetAttr(attr_name));
+Maybe<const T&> OpInterpCtx::Attr(const std::string& attr_name) const {
+  const auto& attr_val = JUST(this->Attr(attr_name));
   if (const auto* ptr = dynamic_cast<const user_op::TypedAttrValRef<T>*>(attr_val.get())) {
     return ptr->val();
   }
   return Error::RuntimeError() << "Invalid type for attribute " << attr_name;
 }
 
-OpAttrs OpInterpCtx::GetAttrs() const { return OpAttrs(this); }
+OpDefinitionAttributes OpInterpCtx::Attrs() const { return OpDefinitionAttributes(this); }
 
 template<typename T>
 Maybe<void> OpInterpCtx::SetAttr(const std::string& attr_name, const T& attr_val) {
-  *const_cast<T*>(&JUST(this->GetAttr<T>(attr_name))) = attr_val;
+  *const_cast<T*>(&JUST(this->Attr<T>(attr_name))) = attr_val;
   return Maybe<void>::Ok();
 }
 
-#define INSTANCE_ATTR_GETTER_AND_SETTER(field, T, attr_type)                         \
-  template Maybe<const T&> OpInterpCtx::GetAttr(const std::string& attr_name) const; \
+#define INSTANCE_ATTR_GETTER_AND_SETTER(field, T, attr_type)                      \
+  template Maybe<const T&> OpInterpCtx::Attr(const std::string& attr_name) const; \
   template Maybe<void> OpInterpCtx::SetAttr(const std::string& attr_name, const T& attr_val);
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_ATTR_GETTER_AND_SETTER, ATTR_SEQ)
@@ -61,6 +61,6 @@ bool OpInterpCtx::HasAttr(const std::string& attr_name) const {
   return AttrNames().count(attr_name) > 0;
 }
 
-const HashSet<std::string>& OpInterpCtx::AttrNames() const { return op_->AttrNames(); }
+const Set<std::string>& OpInterpCtx::AttrNames() const { return op_->AttributeNames(); }
 
 }  // namespace oneflow

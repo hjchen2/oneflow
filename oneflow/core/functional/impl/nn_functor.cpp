@@ -3517,9 +3517,9 @@ class OneEmbeddingLookupGradFunctor {
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
                          const std::shared_ptr<one::Tensor>& embedding_grad,
                          const std::string& key_value_store_options) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options);
+    OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs);
     return Maybe<void>::Ok();
   }
 

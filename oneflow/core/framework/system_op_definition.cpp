@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/system_ops.h"
+#include "oneflow/core/framework/system_op_definition.h"
 #include "oneflow/core/framework/attr_value.h"
 
 namespace oneflow {
 namespace schema {
 
-Maybe<AttrVal> CastToGlobalOp::GetAttr(const std::string& attr_name) const {
+Maybe<AttrVal> CastToGlobalOp::Attr(const std::string& attr_name) const {
   if (attr_name == "shape") {
     return CastAttrValue(&shape);
   } else if (attr_name == "dtype") {
@@ -29,12 +29,12 @@ Maybe<AttrVal> CastToGlobalOp::GetAttr(const std::string& attr_name) const {
   }
 }
 
-const HashSet<std::string>& CastToGlobalOp::AttrNames() const {
-  static HashSet<std::string> attr_names{"shape", "dtype"};
+/*static*/ const Set<std::string>& CastToGlobalOp::AttrNames() {
+  static Set<std::string> attr_names{"shape", "dtype"};
   return attr_names;
 }
 
-Maybe<AttrVal> SelectTopNOp::GetAttr(const std::string& attr_name) const {
+Maybe<AttrVal> SelectTopNOp::Attr(const std::string& attr_name) const {
   if (attr_name == "top_n") {
     return CastAttrValue(&top_n);
   } else {
@@ -42,33 +42,41 @@ Maybe<AttrVal> SelectTopNOp::GetAttr(const std::string& attr_name) const {
   }
 }
 
-const HashSet<std::string>& SelectTopNOp::AttrNames() const {
-  static HashSet<std::string> attr_names{"top_n"};
+/*static*/ const Set<std::string>& SelectTopNOp::AttrNames() {
+  static Set<std::string> attr_names{"top_n"};
   return attr_names;
 }
 
-Maybe<AttrVal> FeedInputOp::GetAttr(const std::string& attr_name) const {
+Maybe<AttrVal> FeedInputOp::Attr(const std::string& attr_name) const {
   return Error::RuntimeError() << "FeedInput op has no attribute named " << attr_name;
 }
 
-Maybe<AttrVal> FetchOutputOp::GetAttr(const std::string& attr_name) const {
+/*static*/ const Set<std::string>& FeedInputOp::AttrNames() {
+  return OpDefinitionAttrNames::Empty();
+}
+
+Maybe<AttrVal> FetchOutputOp::Attr(const std::string& attr_name) const {
   return Error::RuntimeError() << "FetchOutput op has no attribute named " << attr_name;
 }
 
-Maybe<AttrVal> FeedVariableOp::GetAttr(const std::string& attr_name) const {
-  if (attr_name == "_l2") {
-    return CastAttrValue(&_l2);
+/*static*/ const Set<std::string>& FetchOutputOp::AttrNames() {
+  return OpDefinitionAttrNames::Empty();
+}
+
+Maybe<AttrVal> FeedVariableOp::Attr(const std::string& attr_name) const {
+  if (attr_name == "l2") {
+    return CastAttrValue(&l2);
   } else {
     return Error::RuntimeError() << "FeedVariable op has no attribute named " << attr_name;
   }
 }
 
-const HashSet<std::string>& FeedVariableOp::AttrNames() const {
-  static HashSet<std::string> attr_names{"_l2"};
+/*static*/ const Set<std::string>& FeedVariableOp::AttrNames() {
+  static Set<std::string> attr_names{"l2"};
   return attr_names;
 }
 
-Maybe<AttrVal> ImageDecoderRandomCropResizeOp::GetAttr(const std::string& attr_name) const {
+Maybe<AttrVal> ImageDecoderRandomCropResizeOp::Attr(const std::string& attr_name) const {
   if (attr_name == "target_width") {
     return CastAttrValue(&target_width);
   } else if (attr_name == "target_height") {
@@ -96,18 +104,18 @@ Maybe<AttrVal> ImageDecoderRandomCropResizeOp::GetAttr(const std::string& attr_n
   }
 }
 
-const HashSet<std::string>& ImageDecoderRandomCropResizeOp::AttrNames() const {
-  static HashSet<std::string> attr_names{"target_width",
-                                         "target_height",
-                                         "num_workers",
-                                         "max_num_pixels",
-                                         "warmup_size",
-                                         "seed",
-                                         "num_attempts",
-                                         "random_area_min",
-                                         "random_area_max",
-                                         "random_aspect_ratio_min",
-                                         "random_aspect_ratio_max"};
+/*static*/ const Set<std::string>& ImageDecoderRandomCropResizeOp::AttrNames() {
+  static Set<std::string> attr_names{"target_width",
+                                     "target_height",
+                                     "num_workers",
+                                     "max_num_pixels",
+                                     "warmup_size",
+                                     "seed",
+                                     "num_attempts",
+                                     "random_area_min",
+                                     "random_area_max",
+                                     "random_aspect_ratio_min",
+                                     "random_aspect_ratio_max"};
   return attr_names;
 }
 
